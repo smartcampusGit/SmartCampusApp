@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <title>Admin Login</title>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #F9FAFA;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      padding: 24px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    .login-header {
+      font-size: 24px;
+      font-weight: bold;
+      color: #1C1D22;
+      margin-bottom: 16px;
+    }
+
+    .login-subtitle {
+      font-size: 14px;
+      color: #3C3F4A;
+      margin-bottom: 24px;
+    }
+
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #EEEFF2;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #1C1D22;
+    }
+
+    .input-field:focus {
+      border-color: #607AFB;
+      outline: none;
+    }
+
+    .login-button {
+      width: 100%;
+      padding: 12px;
+      background-color: #607AFB;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .login-button:disabled {
+      background-color: #D1D5DB;
+      cursor: not-allowed;
+    }
+
+    .forgot-password {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #607AFB;
+      text-decoration: none;
+    }
+
+    .forgot-password:hover {
+      text-decoration: underline;
+    }
+
+    .back-button {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      font-size: 14px;
+      color: #607AFB;
+      text-decoration: none;
+    }
+
+    .back-button:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <a href="#" class="back-button">&larr; Back</a>
+
+  <div class="login-container">
+    <div class="login-header">Admin Login</div>
+    <div class="login-subtitle">Secure access for campus administrators</div>
+    <form class="login-form">
+      <input type="email" class="input-field" placeholder="Enter your email" required>
+      <input type="password" class="input-field" placeholder="Enter your password" required>
+      <button type="submit" class="login-button">Login</button>
+    </form>
+    <a href="#" class="forgot-password">Forgot your password?</a>
+  </div>
+</body>
+</html>

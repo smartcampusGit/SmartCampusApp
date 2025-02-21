@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "229536709134",
+    "firebase_url": "https://smart-campus-navigation-105e9-default-rtdb.firebaseio.com",
+    "project_id": "smart-campus-navigation-105e9",
+    "storage_bucket": "smart-campus-navigation-105e9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:229536709134:android:350dd7f9883e907ccc9a5f",
+        "android_client_info": {
+          "package_name": "com.HITstudents2025.SmartCampusApp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "229536709134-0tnos84nd7fv7ahcu2dbcnbklltiu1ud.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAv0Vsxk8bUCndhdwQJsGciOzLFL3BOMus"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "229536709134-0tnos84nd7fv7ahcu2dbcnbklltiu1ud.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "229536709134-u3rvldnjmb9fkomtri2qonobq8lj8p80.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.HITstudents2025.SmartCampusApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
