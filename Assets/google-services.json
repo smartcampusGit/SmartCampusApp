@@ -32,10 +32,10 @@
               "client_type": 3
             },
             {
-              "client_id": "229536709134-u3rvldnjmb9fkomtri2qonobq8lj8p80.apps.googleusercontent.com",
+              "client_id": "229536709134-ikr1cljfgl23qek54bnu2gasg9a0qieh.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.HITstudents2025.SmartCampusApp"
+                "bundle_id": "SmartCampus.COM"
               }
             }
           ]

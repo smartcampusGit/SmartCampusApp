@@ -19,13 +19,5 @@
   "devDependencies": {
     "firebase-functions-test": "^3.1.0"
   },
-  "emulators": {
-    "auth": {
-      "port": 9099
-    },
-    "functions": {
-      "port": 5001
-    }
-  },
-  "private": true
+   "private": true
 }

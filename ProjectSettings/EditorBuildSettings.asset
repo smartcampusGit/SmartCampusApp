@@ -4,7 +4,19 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/BuildingsList.unity
+    guid: adcb785e262509a4eb1456bfd6110da8
+  - enabled: 1
+    path: Assets/Scenes/CreateAccountScreen.unity
+    guid: 08a54260882680348a1403961b1becb4
+  - enabled: 1
+    path: Assets/Scenes/LoginScreen.unity
+    guid: 5b1f521792c610442add059c616e88f1
+  - enabled: 1
+    path: Assets/Scenes/Bootstrap.unity
+    guid: 8dca06b1c73c99745bb8f4188eaad373
   m_configObjects:
     com.unity.adaptiveperformance.loader_settings: {fileID: 11400000, guid: 414ce5fc004f2c0419a63fe3d0adf5e5,
       type: 2}
