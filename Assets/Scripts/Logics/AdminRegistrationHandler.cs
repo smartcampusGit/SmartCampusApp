@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
@@ -29,14 +30,16 @@ public class AdminRegistrationHandler : MonoBehaviour
     [Header("Loading Spinner")]
     public GameObject loadingSpinner;
 
+    // File paths (set via UnityEvents from FileUploadHandler)
     private string logoFilePath;
     private string mapFilePath;
     private string approvalFilePath;
 
-    // Setters called by FileUploadHandler
+    // Called via UnityEvent
     public void SetLogoPath(string path) => logoFilePath = path;
     public void SetMapPath(string path) => mapFilePath = path;
     public void SetApprovalPath(string path) => approvalFilePath = path;
+
 
     public void OnSubmitClicked()
     {
@@ -77,23 +80,28 @@ public class AdminRegistrationHandler : MonoBehaviour
 
         var user = regTask.Result;
         string uid = user.User.UserId;
+        
+        // STEP 2: Sanitize campus folder name (letters, numbers, underscores only)
+        string rawCampusName = campusNameInput.text.Trim();
+        string campusFolderName = Regex.Replace(rawCampusName, @"[^a-zA-Z0-9_]+", "_");
         string campusId = Guid.NewGuid().ToString();
 
         Uri logoUrl = null, mapUrl = null, approvalUrl = null;
         bool uploadFailed = false;
 
-        // STEP 2: Upload all files
-        yield return StartCoroutine(UploadFileCoroutine(logoFilePath, storage.GetReference($"campuses/{campusId}/logo.png"), uri => logoUrl = uri, err => {
+
+        // STEP 3: Upload files to Firebase Storage
+        yield return StartCoroutine(UploadFileCoroutine(logoFilePath, storage.GetReference($"campuses/Meta/{campusFolderName}/logo.png"), uri => logoUrl = uri, err => {
             Debug.LogError("Logo upload failed: " + err);
             uploadFailed = true;
         }));
 
-        yield return StartCoroutine(UploadFileCoroutine(mapFilePath, storage.GetReference($"campuses/{campusId}/map.png"), uri => mapUrl = uri, err => {
+        yield return StartCoroutine(UploadFileCoroutine(mapFilePath, storage.GetReference($"campuses/Meta{campusFolderName}/map.png"), uri => mapUrl = uri, err => {
             Debug.LogError("Map upload failed: " + err);
             uploadFailed = true;
         }));
 
-        yield return StartCoroutine(UploadFileCoroutine(approvalFilePath, storage.GetReference($"admins/{uid}/approval.pdf"), uri => approvalUrl = uri, err => {
+        yield return StartCoroutine(UploadFileCoroutine(approvalFilePath, storage.GetReference($"campuses/{uid}/approval.pdf"), uri => approvalUrl = uri, err => {
             Debug.LogError("Approval file upload failed: " + err);
             uploadFailed = true;
         }));
@@ -104,14 +112,14 @@ public class AdminRegistrationHandler : MonoBehaviour
             yield break;
         }
 
-        // STEP 3: Save to Firestore
+        // STEP 4: Write to Firestore
         var now = Timestamp.GetCurrentTimestamp();
         DocumentReference campusDoc = firestore.Collection("Campuses").Document(campusId);
         DocumentReference adminDoc = firestore.Collection("Admin_Profiles").Document(uid);
 
         var campusData = new
         {
-            name = campusNameInput.text,
+            name = rawCampusName,
             logoURL = logoUrl?.ToString(),
             mapImageURL = mapUrl?.ToString(),
             city = cityInput.text,
@@ -143,14 +151,14 @@ public class AdminRegistrationHandler : MonoBehaviour
     {
         if (string.IsNullOrEmpty(filePath))
         {
-            onError?.Invoke("Missing file path");
+            onError?.Invoke("Missing file path.");
             yield break;
         }
 
         byte[] fileBytes = System.IO.File.ReadAllBytes(filePath);
         if (fileBytes.Length == 0)
         {
-            onError?.Invoke("File is empty");
+            onError?.Invoke("File is empty.");
             yield break;
         }
 
@@ -159,7 +167,7 @@ public class AdminRegistrationHandler : MonoBehaviour
 
         if (uploadTask.IsFaulted || uploadTask.Exception != null)
         {
-            onError?.Invoke(uploadTask.Exception?.Message ?? "Unknown upload error");
+            onError?.Invoke(uploadTask.Exception?.Message ?? "Upload failed.");
             yield break;
         }
 
@@ -168,7 +176,7 @@ public class AdminRegistrationHandler : MonoBehaviour
 
         if (getUrlTask.IsFaulted || getUrlTask.Exception != null)
         {
-            onError?.Invoke(getUrlTask.Exception?.Message ?? "Failed to get download URL");
+            onError?.Invoke(getUrlTask.Exception?.Message ?? "Failed to get file URL.");
             yield break;
         }
 
