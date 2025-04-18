@@ -1,13 +1,9 @@
-using System;
-using System.Collections;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using Firebase.Auth;
-using Firebase.Firestore;
-using Firebase.Storage;
+using UnityEngine.Networking;
+using System.Collections;
+using System.IO;
 
 public class AdminRegistrationHandler : MonoBehaviour
 {
@@ -19,167 +15,140 @@ public class AdminRegistrationHandler : MonoBehaviour
 
     [Header("Campus Info Inputs")]
     public TMP_InputField campusNameInput;
+    public TMP_InputField descriptionInput;
     public TMP_InputField cityInput;
     public TMP_InputField countryInput;
 
-    [Header("File Path Displays (TMP_Texts)")]
-    public TMP_Text logoPathText;
-    public TMP_Text mapPathText;
-    public TMP_Text approvalPathText;
-
-    [Header("Loading Spinner")]
-    public GameObject loadingSpinner;
-
-    // File paths (set via UnityEvents from FileUploadHandler)
     private string logoFilePath;
     private string mapFilePath;
     private string approvalFilePath;
+    private string profilePicturePath;
 
-    // Called via UnityEvent
+    [Header("UI Feedback")]
+    public GameObject loadingSpinner;
+
+    [SerializeField] private GameObject successPopupOverlay;
+    [SerializeField] private TMP_Text welcomeText;
+    [SerializeField] private Button okButton;
+
+    // Cloud Function URL
+    private string cloudFunctionUrl = "https://us-central1-smart-campus-navigation-105e9.cloudfunctions.net/registerAdmin/registerAdmin";
+
     public void SetLogoPath(string path) => logoFilePath = path;
     public void SetMapPath(string path) => mapFilePath = path;
     public void SetApprovalPath(string path) => approvalFilePath = path;
+    public void SetProfilePhotoPath(string path) => profilePicturePath = path;
 
+    private void Awake()
+    {
+        okButton.onClick.AddListener(() => StartCoroutine(FadeOutPopup()));
+
+        var btnColors = okButton.colors;
+        btnColors.normalColor = new Color32(46, 204, 113, 255);
+        btnColors.highlightedColor = new Color32(39, 174, 96, 255);
+        okButton.colors = btnColors;
+    }
 
     public void OnSubmitClicked()
     {
-        if (!FirebaseInitializer.IsReady)
-        {
-            Debug.LogWarning("Firebase is not ready!");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(emailInput.text))
-        {
-            Debug.LogWarning("Email is required.");
-            emailInput.Select();
-            return;
-        }
-
-        StartCoroutine(HandleRegistrationFlow());
+        StartCoroutine(SendRegistrationRequest());
     }
 
-    private IEnumerator HandleRegistrationFlow()
+    private IEnumerator SendRegistrationRequest()
     {
         loadingSpinner.SetActive(true);
 
-        var auth = FirebaseInitializer.Auth;
-        var firestore = FirebaseInitializer.Firestore;
-        var storage = FirebaseInitializer.Storage;
+        WWWForm form = new WWWForm();
+        form.AddField("email", emailInput.text);
+        form.AddField("password", passwordInput.text);
+        form.AddField("adminName", adminNameInput.text);
+        form.AddField("role", roleInput.text);
+        form.AddField("campusName", campusNameInput.text);
+        form.AddField("description", descriptionInput.text);
+        form.AddField("city", cityInput.text);
+        form.AddField("country", countryInput.text);
 
-        // STEP 1: Create Firebase Auth user
-        var regTask = auth.CreateUserWithEmailAndPasswordAsync(emailInput.text, passwordInput.text);
-        yield return new WaitUntil(() => regTask.IsCompleted);
-
-        if (regTask.Exception != null)
+        if (File.Exists(logoFilePath))
         {
-            Debug.LogError("Firebase Auth failed: " + regTask.Exception);
-            loadingSpinner.SetActive(false);
-            yield break;
+            AddFileToForm(form, "logo", logoFilePath, "image/jpeg");
         }
 
-        var user = regTask.Result;
-        string uid = user.User.UserId;
-        
-        // STEP 2: Sanitize campus folder name (letters, numbers, underscores only)
-        string rawCampusName = campusNameInput.text.Trim();
-        string campusFolderName = Regex.Replace(rawCampusName, @"[^a-zA-Z0-9_]+", "_");
-        string campusId = Guid.NewGuid().ToString();
-
-        Uri logoUrl = null, mapUrl = null, approvalUrl = null;
-        bool uploadFailed = false;
-
-
-        // STEP 3: Upload files to Firebase Storage
-        yield return StartCoroutine(UploadFileCoroutine(logoFilePath, storage.GetReference($"campuses/Meta/{campusFolderName}/logo.png"), uri => logoUrl = uri, err => {
-            Debug.LogError("Logo upload failed: " + err);
-            uploadFailed = true;
-        }));
-
-        yield return StartCoroutine(UploadFileCoroutine(mapFilePath, storage.GetReference($"campuses/Meta{campusFolderName}/map.png"), uri => mapUrl = uri, err => {
-            Debug.LogError("Map upload failed: " + err);
-            uploadFailed = true;
-        }));
-
-        yield return StartCoroutine(UploadFileCoroutine(approvalFilePath, storage.GetReference($"campuses/{uid}/approval.pdf"), uri => approvalUrl = uri, err => {
-            Debug.LogError("Approval file upload failed: " + err);
-            uploadFailed = true;
-        }));
-
-        if (uploadFailed)
+        if (File.Exists(mapFilePath))
         {
-            loadingSpinner.SetActive(false);
-            yield break;
+            AddFileToForm(form, "map", mapFilePath, "image/jpeg");
         }
 
-        // STEP 4: Write to Firestore
-        var now = Timestamp.GetCurrentTimestamp();
-        DocumentReference campusDoc = firestore.Collection("Campuses").Document(campusId);
-        DocumentReference adminDoc = firestore.Collection("Admin_Profiles").Document(uid);
-
-        var campusData = new
+        if (File.Exists(approvalFilePath))
         {
-            name = rawCampusName,
-            logoURL = logoUrl?.ToString(),
-            mapImageURL = mapUrl?.ToString(),
-            city = cityInput.text,
-            country = countryInput.text,
-            createdAt = now,
-            adminId = new[] { uid }
-        };
+            string ext = Path.GetExtension(approvalFilePath).ToLower();
+            string mime = ext == ".pdf" ? "application/pdf" : "application/octet-stream";
+            AddFileToForm(form, "approval", approvalFilePath, mime);
+        }
 
-        var adminData = new
+        if (File.Exists(profilePicturePath))
         {
-            adminName = adminNameInput.text,
-            email = emailInput.text,
-            role = roleInput.text,
-            status = "pending",
-            createdAt = now,
-            campusId = campusId,
-            employeeApprovalFileURL = approvalUrl?.ToString()
-        };
+            string ext = Path.GetExtension(profilePicturePath).ToLower();
+            string mime = ext switch
+            {
+                ".png" => "image/png",
+                ".jpg" => "image/jpeg",
+                ".jpeg" => "image/jpeg",
+                _ => "application/octet-stream"
+            };
+            AddFileToForm(form, "profilePicture", profilePicturePath, mime);
+        }
 
-        Task campusWrite = campusDoc.SetAsync(campusData);
-        Task adminWrite = adminDoc.SetAsync(adminData);
-        yield return new WaitUntil(() => campusWrite.IsCompleted && adminWrite.IsCompleted);
+        using (UnityWebRequest request = UnityWebRequest.Post(cloudFunctionUrl, form))
+        {
+            yield return request.SendWebRequest();
+            loadingSpinner.SetActive(false);
 
-        loadingSpinner.SetActive(false);
-        Debug.Log("Registration complete!");
+            if (request.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogError("Upload failed: " + request.error);
+                Debug.Log("Response: " + request.downloadHandler.text);
+            }
+            else
+            {
+                Debug.Log("Upload success: " + request.downloadHandler.text);
+                ShowPopup(adminNameInput.text);
+            }
+        }
     }
 
-    private IEnumerator UploadFileCoroutine(string filePath, StorageReference storageRef, Action<Uri> onSuccess, Action<string> onError)
+    private void AddFileToForm(WWWForm form, string fieldName, string filePath, string mimeType)
     {
-        if (string.IsNullOrEmpty(filePath))
+        byte[] data = File.ReadAllBytes(filePath);
+        string name = Path.GetFileName(filePath);
+        form.AddBinaryData(fieldName, data, name, mimeType);
+    }
+
+    private void ShowPopup(string adminName)
+    {
+        welcomeText.text = $"Welcome, <b>{adminName}</b>";
+        StartCoroutine(FadeInPopup());
+    }
+
+    private IEnumerator FadeInPopup()
+    {
+        CanvasGroup cg = successPopupOverlay.GetComponent<CanvasGroup>();
+        cg.alpha = 0;
+        successPopupOverlay.SetActive(true);
+        while (cg.alpha < 1f)
         {
-            onError?.Invoke("Missing file path.");
-            yield break;
+            cg.alpha += Time.deltaTime * 2;
+            yield return null;
         }
+    }
 
-        byte[] fileBytes = System.IO.File.ReadAllBytes(filePath);
-        if (fileBytes.Length == 0)
+    private IEnumerator FadeOutPopup()
+    {
+        CanvasGroup cg = successPopupOverlay.GetComponent<CanvasGroup>();
+        while (cg.alpha > 0f)
         {
-            onError?.Invoke("File is empty.");
-            yield break;
+            cg.alpha -= Time.deltaTime * 2;
+            yield return null;
         }
-
-        var uploadTask = storageRef.PutBytesAsync(fileBytes);
-        yield return new WaitUntil(() => uploadTask.IsCompleted);
-
-        if (uploadTask.IsFaulted || uploadTask.Exception != null)
-        {
-            onError?.Invoke(uploadTask.Exception?.Message ?? "Upload failed.");
-            yield break;
-        }
-
-        var getUrlTask = storageRef.GetDownloadUrlAsync();
-        yield return new WaitUntil(() => getUrlTask.IsCompleted);
-
-        if (getUrlTask.IsFaulted || getUrlTask.Exception != null)
-        {
-            onError?.Invoke(getUrlTask.Exception?.Message ?? "Failed to get file URL.");
-            yield break;
-        }
-
-        onSuccess?.Invoke(getUrlTask.Result);
+        successPopupOverlay.SetActive(false);
     }
 }

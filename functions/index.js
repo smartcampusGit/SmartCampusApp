@@ -1,23 +1,25 @@
-const functions = require("firebase-functions/v1");
-const admin = require("firebase-admin");
+﻿/* eslint-disable no-unused-vars */
+// functions/index.js  –for "firebase-functions" v4+
+const {initializeApp} = require("firebase-admin/app");
+initializeApp();
 
-// Initialize Firebase Admin
-admin.initializeApp();
+/* ── v4 style imports ─────────────────────────── */
+const {onRequest} = require("firebase-functions/v2/https");
+const {onCall} = require("firebase-functions/v2/https"); // same module
+const {app: registerAdminApp} = require("./registerAdmin");
+const {app: addManagerApp} = require("./addManager");
+const {setAdminClaims} = require("./setAdminClaims"); // already onCall
 
-// Cloud Function: Trigger when a new user is created
-exports.createUserInFirestore = functions.auth.user().onCreate(async (user) => {
-    const db = admin.firestore();
-    const userRef = db.collection("users").doc(user.uid);
+/* ── HTTP endpoints ───────────────────────────── */
+exports.registerAdmin = onRequest(
+    {region: "us-central1"}, // first argument is options
+    registerAdminApp,
+);
 
-    try {
-        await userRef.set({
-            email: user.email,
-            status: "pending",
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        console.log(`User ${user.email} added to Firestore with 'pending' status.`);
-    } catch (error) {
-        console.error("Error adding user to Firestore:", error);
-    }
-});
+exports.addManager = onRequest(
+    {region: "us-central1"},
+    addManagerApp,
+);
 
+/* ── Callable (onCall) endpoint ───────────────── */
+exports.setAdminClaims = setAdminClaims;
